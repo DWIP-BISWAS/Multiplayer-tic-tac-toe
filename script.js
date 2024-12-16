@@ -1,54 +1,89 @@
-const socket = io();
+const usernameInput = document.getElementById("username");
+const startBtn = document.getElementById("start-btn");
+const gameBoard = document.getElementById("game-board");
+const boardElement = document.getElementById("board");
+const statusElement = document.getElementById("status");
+const resetBtn = document.getElementById("reset-btn");
 
-let roomId = null;
+let username = "";
+let gameId = null;
+let currentPlayer = "";
+let boardState = Array(9).fill("");
 
-// Login screen
-document.getElementById('join-btn').addEventListener('click', () => {
-  const username = document.getElementById('username').value.trim();
-  if (username) {
-    socket.emit('join', username);
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('game-screen').style.display = 'block';
+startBtn.addEventListener("click", async () => {
+  username = usernameInput.value.trim();
+  if (!username) {
+    alert("Please enter your name.");
+    return;
   }
-});
 
-// Game start
-socket.on('start', ({ opponent, roomId: gameRoom }) => {
-  roomId = gameRoom;
-  document.getElementById('opponent-name').innerText = opponent;
-  const board = document.getElementById('game-board');
-  board.innerHTML = '';
-  for (let i = 0; i < 9; i++) {
-    const cell = document.createElement('div');
-    cell.classList.add('cell');
-    cell.dataset.index = i;
-    cell.addEventListener('click', () => {
-      socket.emit('move', { roomId, index: i });
-    });
-    board.appendChild(cell);
-  }
-});
+  startBtn.disabled = true;
+  usernameInput.disabled = true;
 
-// Game update
-socket.on('update', (board) => {
-  document.querySelectorAll('.cell').forEach((cell, index) => {
-    cell.innerText = board[index] || '';
+  const response = await fetch("/.netlify/functions/game", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "start", username }),
   });
+
+  const data = await response.json();
+  gameId = data.gameId;
+  currentPlayer = data.currentPlayer;
+
+  gameBoard.style.display = "block";
+  statusElement.textContent = `Game started! You are ${currentPlayer}. Waiting for opponent...`;
+
+  checkGameUpdates();
 });
 
-// Chat
-document.getElementById('send-btn').addEventListener('click', () => {
-  const input = document.getElementById('chat-input');
-  const message = input.value.trim();
-  if (message) {
-    socket.emit('chat', { roomId, message });
-    input.value = '';
+function createBoard() {
+  boardElement.innerHTML = "";
+  boardState.forEach((cell, index) => {
+    const cellElement = document.createElement("div");
+    cellElement.classList.add("cell");
+    if (cell) {
+      cellElement.textContent = cell;
+      cellElement.classList.add("taken");
+    } else {
+      cellElement.addEventListener("click", () => makeMove(index));
+    }
+    boardElement.appendChild(cellElement);
+  });
+}
+
+async function makeMove(index) {
+  const response = await fetch("/.netlify/functions/game", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "move", gameId, username, index }),
+  });
+
+  const data = await response.json();
+  if (data.error) {
+    alert(data.error);
+  } else {
+    boardState = data.boardState;
+    createBoard();
+    if (data.winner) {
+      statusElement.textContent = data.winner === "draw" ? "It's a draw!" : `${data.winner} wins!`;
+      resetBtn.style.display = "block";
+    } else {
+      statusElement.textContent = `Your move, ${data.currentTurn}.`;
+    }
   }
-});
+}
 
-socket.on('chat', ({ username, message }) => {
-  const chatBox = document.getElementById('chat-box');
-  const chatMessage = document.createElement('p');
-  chatMessage.innerText = `${username}: ${message}`;
-  chatBox.appendChild(chatMessage);
-});
+async function checkGameUpdates() {
+  const response = await fetch(`/functions/game?gameId=${gameId}`);
+  const data = await response.json();
+  boardState = data.boardState;
+  createBoard();
+  if (data.winner) {
+    statusElement.textContent = data.winner === "draw" ? "It's a draw!" : `${data.winner} wins!`;
+    resetBtn.style.display = "block";
+  } else {
+    statusElement.textContent = `Your move, ${data.currentTurn}.`;
+    setTimeout(checkGameUpdates, 1000);
+  }
+                          }
+    
