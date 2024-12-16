@@ -1,0 +1,45 @@
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+}
+
+#login-screen, #game-screen {
+  margin: 20px auto;
+  max-width: 400px;
+}
+
+#game-board {
+  display: grid;
+  grid-template-columns: repeat(3, 100px);
+  grid-gap: 5px;
+  margin: 20px auto;
+}
+
+.cell {
+  width: 100px;
+  height: 100px;
+  border: 1px solid #000;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+#chat-container {
+  margin-top: 20px;
+}
+
+#chat-box {
+  border: 1px solid #ccc;
+  height: 100px;
+  overflow-y: scroll;
+  margin-bottom: 10px;
+}
+
+#chat-input {
+  width: 70%;
+}
+  
