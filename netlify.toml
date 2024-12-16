@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = "."
+
+[[redirects]]
+  from = "/socket.io/*"
+  to = "http://localhost:3000/socket.io/:splat"
+  status = 200
+  force = true
